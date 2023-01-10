@@ -1,3 +1,4 @@
+import requests
 import html
 import json
 import math
@@ -98,27 +99,28 @@ def send_gradio_gallery_to_image(x):
         return None
     return image_from_url_text(x[0])
 
-def save_files(js_data, images, do_make_zip, index):
+def save_files(js_data, images, do_make_zip, index, url_params):
     import csv
     filenames = []
     fullfns = []
+    # quick dictionary to class object conversion. Its necessary due apply_filename_pattern requiring it
 
-    #quick dictionary to class object conversion. Its necessary due apply_filename_pattern requiring it
     class MyObject:
         def __init__(self, d=None):
             if d is not None:
                 for key, value in d.items():
                     setattr(self, key, value)
+    json_data = json.loads(js_data)
 
-    data = json.loads(js_data)
-
-    p = MyObject(data)
+    p = MyObject(json_data)
     path = opts.outdir_save
     save_to_dirs = opts.use_save_to_dirs_for_ui
     extension: str = opts.samples_format
     start_index = 0
-
-    if index > -1 and opts.save_selected_only and (index >= data["index_of_first_image"]):  # ensures we are looking at a specific non-grid picture, and we have save_selected_only
+    print(url_params)
+    user_id = 0 if not url_params[0] else url_params[0]["userId"]
+    # ensures we are looking at a specific non-grid picture, and we have save_selected_only
+    if index > -1 and opts.save_selected_only and (index >= json_data["index_of_first_image"]):
 
         images = [images[index]]
         start_index = index
@@ -129,7 +131,8 @@ def save_files(js_data, images, do_make_zip, index):
         at_start = file.tell() == 0
         writer = csv.writer(file)
         if at_start:
-            writer.writerow(["prompt", "seed", "width", "height", "sampler", "cfgs", "steps", "filename", "negative_prompt"])
+            writer.writerow(["user_id", "prompt", "seed", "width", "height", "sampler",
+                            "cfgs", "steps", "filename", "negative_prompt"])
 
         for image_index, filedata in enumerate(images, start_index):
             image = image_from_url_text(filedata)
@@ -137,7 +140,8 @@ def save_files(js_data, images, do_make_zip, index):
             is_grid = image_index < p.index_of_first_image
             i = 0 if is_grid else (image_index - p.index_of_first_image)
 
-            fullfn, txt_fullfn = save_image(image, path, "", seed=p.all_seeds[i], prompt=p.all_prompts[i], extension=extension, info=p.infotexts[image_index], grid=is_grid, p=p, save_to_dirs=save_to_dirs)
+            fullfn, txt_fullfn = save_image(image, path, "", seed=p.all_seeds[i], prompt=p.all_prompts[i],
+                                            extension=extension, info=p.infotexts[image_index], grid=is_grid, p=p, save_to_dirs=save_to_dirs)
 
             filename = os.path.relpath(fullfn, path)
             filenames.append(filename)
@@ -146,11 +150,11 @@ def save_files(js_data, images, do_make_zip, index):
                 filenames.append(os.path.basename(txt_fullfn))
                 fullfns.append(txt_fullfn)
 
-        writer.writerow([data["prompt"], data["seed"], data["width"], data["height"], data["sampler_name"], data["cfg_scale"], data["steps"], filenames[0], data["negative_prompt"]])
-
+        writer.writerow([user_id, json_data["prompt"], json_data["seed"], json_data["width"], json_data["height"], json_data["sampler_name"],
+                        json_data["cfg_scale"], json_data["steps"], filenames[0], json_data["negative_prompt"]])
     # Make Zip
     if do_make_zip:
-        zip_filepath = os.path.join(path, "images.zip")
+        zip_filepath = os.path.join(path, fullfns[0]+"_images.zip")
 
         from zipfile import ZipFile
         with ZipFile(zip_filepath, "w") as zip_file:
@@ -158,8 +162,31 @@ def save_files(js_data, images, do_make_zip, index):
                 with open(fullfns[i], mode="rb") as f:
                     zip_file.writestr(filenames[i], f.read())
         fullfns.insert(0, zip_filepath)
+    print(fullfns)
+    post_data = fullfns.copy()
+    post_data.insert(0, user_id)
+    print(post_data)
+    try:
+        x = requests.post(
+            "http://www.picas.ai:10580/api/notify", data=post_data)
+        print(x.text)
+    except Exception as e:
+        logging.error('Failed to post: ' + str(e))
+    return gr.File.update(value=fullfns, visible=True), '', '', plaintext_to_html(f"Saved: {filenames[0]}"), fullfns
 
-    return gr.File.update(value=fullfns, visible=True), plaintext_to_html(f"Saved: {filenames[0]}")
+
+# def notify_web_server(download_files, url_params):
+#     post_data = []
+#     post_data.append(url_params[0]["userId"])
+#     post_data.append(download_files[0].orig_name)
+#     print(post_data)
+#     try:
+#         x = requests.post(
+#             "http://www.picas.ai:10580/api/notify", data=post_data)
+#         print(x.text)
+#     except Exception as e:
+#         logging.error('Failed to post: ' + str(e))
+
 
 
 def calc_time_left(progress, threshold, label, force_display, show_eta):
@@ -545,7 +572,8 @@ def create_refresh_button(refresh_component, refresh_method, refreshed_args, ele
 def create_output_panel(tabname, outdir):
     def open_folder(f):
         if not os.path.exists(f):
-            print(f'Folder "{f}" does not exist. After you create an image, the folder will be created.')
+            print(
+                f'Folder "{f}" does not exist. After you create an image, the folder will be created.')
             return
         elif not os.path.isdir(f):
             print(f"""
@@ -562,89 +590,95 @@ Requested path was: {f}
                 os.startfile(path)
             elif platform.system() == "Darwin":
                 sp.Popen(["open", path])
-            elif "microsoft-standard-WSL2" in platform.uname().release:
-                sp.Popen(["wsl-open", path])
             else:
                 sp.Popen(["xdg-open", path])
 
     with gr.Column(variant='panel'):
-            with gr.Group():
-                result_gallery = gr.Gallery(label='Output', show_label=False, elem_id=f"{tabname}_gallery").style(grid=4)
+        with gr.Group():
+            result_gallery = gr.Gallery(
+                label='Output', show_label=False, elem_id=f"{tabname}_gallery").style(grid=4)
 
-            generation_info = None
-            with gr.Column():
-                with gr.Row(elem_id=f"image_buttons_{tabname}"):
-                    open_folder_button = gr.Button(folder_symbol, elem_id="hidden_element" if shared.cmd_opts.hide_ui_dir_config else f'open_folder_{tabname}')
-
-                    if tabname != "extras":
-                        save = gr.Button('Save', elem_id=f'save_{tabname}')
-                        save_zip = gr.Button('Zip', elem_id=f'save_zip_{tabname}')
-
-                    buttons = parameters_copypaste.create_buttons(["img2img", "inpaint", "extras"])
-
-                open_folder_button.click(
-                    fn=lambda: open_folder(opts.outdir_samples or outdir),
-                    inputs=[],
-                    outputs=[],
-                )
-
+        generation_info = None
+        with gr.Column():
+            with gr.Row():
                 if tabname != "extras":
-                    with gr.Row():
-                        download_files = gr.File(None, file_count="multiple", interactive=False, show_label=False, visible=False, elem_id=f'download_files_{tabname}')
+                    save = gr.Button('Save', elem_id=f'save_{tabname}')
 
-                    with gr.Group():
-                        html_info = gr.HTML(elem_id=f'html_info_{tabname}')
-                        html_log = gr.HTML(elem_id=f'html_log_{tabname}')
+                buttons = parameters_copypaste.create_buttons(
+                    ["img2img", "inpaint", "extras"])
+                button_id = "hidden_element" if shared.cmd_opts.hide_ui_dir_config else 'open_folder'
+                open_folder_button = gr.Button(
+                    folder_symbol, elem_id=button_id)
 
-                        generation_info = gr.Textbox(visible=False, elem_id=f'generation_info_{tabname}')
-                        if tabname == 'txt2img' or tabname == 'img2img':
-                            generation_info_button = gr.Button(visible=False, elem_id=f"{tabname}_generation_info_button")
-                            generation_info_button.click(
-                                fn=update_generation_info,
-                                _js="(x, y) => [x, y, selected_gallery_index()]",
-                                inputs=[generation_info, html_info],
-                                outputs=[html_info],
-                                preprocess=False
-                            )
+            open_folder_button.click(
+                fn=lambda: open_folder(opts.outdir_samples or outdir),
+                inputs=[],
+                outputs=[],
+            )
 
-                        save.click(
-                            fn=wrap_gradio_call(save_files),
-                            _js="(x, y, z, w) => [x, y, false, selected_gallery_index()]",
-                            inputs=[
-                                generation_info,
-                                result_gallery,
-                                html_info,
-                                html_info,
-                            ],
-                            outputs=[
-                                download_files,
-                                html_log,
-                            ]
+            if tabname != "extras":
+                def predict(url_params):
+                    return url_params
+
+                get_window_url_params = """
+                        function(url_params) {
+                            console.log(url_params);
+                            const params = new URLSearchParams(window.location.search);
+                            url_params = Object.fromEntries(params);
+                            return [url_params];
+                            }
+                        """
+                with gr.Row():
+                    do_make_zip = gr.Checkbox(
+                        label="Make Zip when Save?", value=False)
+
+                with gr.Row():
+                    download_files = gr.File(
+                        None, file_count="multiple", interactive=False, show_label=False, visible=False)
+
+                with gr.Group():
+                    html_info = gr.HTML()
+                    generation_info = gr.Textbox(visible=False)
+                    url_params = gr.JSON({}, visible=False, label="URL Params")
+                    generation_info.change(fn=predict, inputs=[url_params],
+                                           outputs=[url_params], _js=get_window_url_params)
+                    if tabname == 'txt2img' or tabname == 'img2img':
+                        generation_info_button = gr.Button(
+                            visible=False, elem_id=f"{tabname}_generation_info_button")
+                        generation_info_button.click(
+                            fn=update_generation_info,
+                            _js="(x, y) => [x, y, selected_gallery_index()]",
+                            inputs=[generation_info, html_info],
+                            outputs=[html_info],
+                            preprocess=False,
                         )
-
-                        save_zip.click(
-                            fn=wrap_gradio_call(save_files),
-                            _js="(x, y, z, w) => [x, y, true, selected_gallery_index()]",
-                            inputs=[
-                                generation_info,
-                                result_gallery,
-                                html_info,
-                                html_info,
-                            ],
-                            outputs=[
-                                download_files,
-                                html_log,
-                            ]
-                        )
-
-                else:
-                    html_info_x = gr.HTML(elem_id=f'html_info_x_{tabname}')
-                    html_info = gr.HTML(elem_id=f'html_info_{tabname}')
-                    html_log = gr.HTML(elem_id=f'html_log_{tabname}')
-
-                parameters_copypaste.bind_buttons(buttons, result_gallery, "txt2img" if tabname == "txt2img" else None)
-                return result_gallery, generation_info if tabname != "extras" else html_info_x, html_info, html_log
-
+                    # save_info = gr.Textbox(visible=False)
+                    save.click(
+                        fn=wrap_gradio_call(save_files),
+                        _js="(x, y, z, w, u) => [x, y, z, selected_gallery_index(), u]",
+                        inputs=[
+                            generation_info,
+                            result_gallery,
+                            do_make_zip,
+                            html_info,
+                            url_params,
+                        ],
+                        outputs=[
+                            download_files,
+                            html_info,
+                            html_info,
+                            html_info,
+                            # save_info,
+                        ]
+                    )
+                    # save_info.change(fn=notify_web_server, inputs=[
+                    #     download_files, url_params])
+            else:
+                html_info_x = gr.HTML()
+                html_info = gr.HTML()
+            parameters_copypaste.bind_buttons(
+                buttons, result_gallery, "txt2img" if tabname == "txt2img" else None)
+            return result_gallery, generation_info if tabname != "extras" else html_info_x, html_info
 
 def create_sampler_and_steps_selection(choices, tabname):
     if opts.samplers_in_dropdown:
