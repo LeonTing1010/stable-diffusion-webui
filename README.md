@@ -73,4 +73,6 @@ Load balancing.
 The SM scheduling system transmits MQ messages to the SS service. Upon receiving the message, the SS service calls the SM interface and allocates idle GPU nodes according to the required resource information. It then creates Pods and binds them to the GPU nodes. After the calculation is complete, it notifies the SM scheduling system to delete the Pod and reclaim the resources, thus completing resource scheduling and management.
 
 
+### Summary
 
+AIGC platform provides powerful AI training and image generation services to meet various types of needs, with flexible resource management and scheduling capabilities. It can provide better services according to the requirements of physical resources, including AI model training, AI image generation, elastic management, load balance, etc., and supports various algorithms such as DreamBooth for real-time text-to-image conversion, giving AI developers more functions and possibilities.
