@@ -1,9 +1,8 @@
-import argparse
 import unittest
 import requests
 import base64
 import io
-import uuid
+# import uuid
 from PIL import Image, PngImagePlugin
 
 import sys
@@ -12,32 +11,47 @@ import time
 
 logger = logging.getLogger()
 logger.level = logging.INFO
+fh = logging.FileHandler(f'test/aigc/logs/512.log')
+fh.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+logger.addHandler(fh)
+logger.addHandler(ch)
+URL = "http://172.20.10.30:7720"
 
 
-def repeat():
-    def repeatHelper(f):
-        def callHelper(*args):
-            stream_handler = logging.StreamHandler(sys.stdout)
-            logger.addHandler(stream_handler)
-            try:
-                while True:
-                    start = time.time()
-                    f(*args)
-                    end = time.time()
-                    logging.getLogger().info(
-                        "The time of execution of above program is %f s", (end-start))
-            finally:
-                logger.removeHandler(stream_handler)
+# def repeat():
+#     def repeatHelper(f):
+#         def callHelper(*args):
+#             stream_handler = logging.StreamHandler(sys.stdout)
+#             logger.addHandler(stream_handler)
+#             try:
+#                 while True:
+#                     start = time.time()
+#                     f(*args)
+#                     end = time.time()
+#                     logging.getLogger().info(
+#                         "The time of execution of above program is %f s", (end-start))
+#             finally:
+#                 logger.removeHandler(stream_handler)
 
-        return callHelper
+#         return callHelper
 
-    return repeatHelper
+#     return repeatHelper
 
 
 class TestTxt2ImgWorking(unittest.TestCase):
     def setUp(self):
         self.url_txt2img = URL+"/sdapi/v1/txt2img"
         self.url_pnginfo = URL+"/sdapi/v1/png-info"
+        self.url_sd_models = URL+"/sdapi/v1/sd-models"
+        self.options = URL+"/sdapi/v1/options"
+        self.refresh = URL+"/sdapi/v1/refresh-checkpoints"
+
         self.simple_txt2img = {
             "enable_hr": False,
             "denoising_strength": 0,
@@ -67,11 +81,28 @@ class TestTxt2ImgWorking(unittest.TestCase):
             "sampler_index": "Euler a"
         }
 
-    @repeat()
+    # @repeat()
     def test_txt2img_simple_performed(self):
+
+        responseRefresh = requests.post(self.refresh)
+        self.assertEqual(responseRefresh.status_code, 200)
+
+        responseSdModels = requests.get(self.url_sd_models)
+        self.assertEqual(responseSdModels.status_code, 200)
+
+        sdModels = responseSdModels.json()
+        for m in sdModels:
+            logger.info(m["title"])
+        if len(sdModels) > 1:
+            options = {
+                "sd_model_checkpoint": sdModels[1]["title"],
+            }
+            logger.info("select model => "+sdModels[1]["title"])
+            responseOptions = requests.post(self.options, json=options)
+            self.assertEqual(responseOptions.status_code, 200)
+
         responseTxt2img = requests.post(self.url_txt2img,
                                         json=self.simple_txt2img)
-        self.assertEqual(responseTxt2img.status_code, 200)
         r = responseTxt2img.json()
         self.save_image(r['images'])
 
@@ -87,31 +118,9 @@ class TestTxt2ImgWorking(unittest.TestCase):
             uuid_str = str(index)
             image = Image.open(io.BytesIO(
                 base64.b64decode(i.split(",", 1)[0])))
-            image.save(f'512/{c}{uuid_str}.png', pnginfo=pngInfo)
+            image.save(f'test/aigc/512/{uuid_str}.png', pnginfo=pngInfo)
             index += 1
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--p', default='7720')
-    parser.add_argument('--c', default='0')
-    parser.add_argument('unittest_args', nargs='*')
-
-    args = parser.parse_args()
-    c = args.c
-    URL = "http://172.20.10.25:"+args.p
-
-    # Now set the sys.argv to the unittest_args (leaving sys.argv[0] alone)
-    sys.argv[1:] = args.unittest_args
-
-    fh = logging.FileHandler(f"logs/{c}/txt2img.log")
-    fh.setLevel(logging.INFO)
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    logger.addHandler(fh)
-    logger.addHandler(ch)
     unittest.main()
