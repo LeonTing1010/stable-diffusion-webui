@@ -1,162 +1,79 @@
-# Stable Diffusion web UI
-A browser interface based on Gradio library for Stable Diffusion.
+### Overview of AIGC Platform
 
-![](screenshot.png)
+The AIGC Platform meets the demands for AI model training and image generation, supports flexible resource management and scheduling, and can provide better services according to the demands of physical resources. It has main functions such as AI model training, AI image generation, elastic management, load balancing, and can also be integrated with external systems through API interfaces to achieve different computing tasks.
 
-## Features
-[Detailed feature showcase with images](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Features):
-- Original txt2img and img2img modes
-- One click install and run script (but you still must install python and git)
-- Outpainting
-- Inpainting
-- Color Sketch
-- Prompt Matrix
-- Stable Diffusion Upscale
-- Attention, specify parts of text that the model should pay more attention to
-    - a man in a ((tuxedo)) - will pay more attention to tuxedo
-    - a man in a (tuxedo:1.21) - alternative syntax
-    - select text and press ctrl+up or ctrl+down to automatically adjust attention to selected text (code contributed by anonymous user)
-- Loopback, run img2img processing multiple times
-- X/Y/Z plot, a way to draw a 3 dimensional plot of images with different parameters
-- Textual Inversion
-    - have as many embeddings as you want and use any names you like for them
-    - use multiple embeddings with different numbers of vectors per token
-    - works with half precision floating point numbers
-    - train embeddings on 8GB (also reports of 6GB working)
-- Extras tab with:
-    - GFPGAN, neural network that fixes faces
-    - CodeFormer, face restoration tool as an alternative to GFPGAN
-    - RealESRGAN, neural network upscaler
-    - ESRGAN, neural network upscaler with a lot of third party models
-    - SwinIR and Swin2SR([see here](https://github.com/AUTOMATIC1111/stable-diffusion-webui/pull/2092)), neural network upscalers
-    - LDSR, Latent diffusion super resolution upscaling
-- Resizing aspect ratio options
-- Sampling method selection
-    - Adjust sampler eta values (noise multiplier)
-    - More advanced noise setting options
-- Interrupt processing at any time
-- 4GB video card support (also reports of 2GB working)
-- Correct seeds for batches
-- Live prompt token length validation
-- Generation parameters
-     - parameters you used to generate images are saved with that image
-     - in PNG chunks for PNG, in EXIF for JPEG
-     - can drag the image to PNG info tab to restore generation parameters and automatically copy them into UI
-     - can be disabled in settings
-     - drag and drop an image/text-parameters to promptbox
-- Read Generation Parameters Button, loads parameters in promptbox to UI
-- Settings page
-- Running arbitrary python code from UI (must run with --allow-code to enable)
-- Mouseover hints for most UI elements
-- Possible to change defaults/mix/max/step values for UI elements via text config
-- Tiling support, a checkbox to create images that can be tiled like textures
-- Progress bar and live image generation preview
-    - Can use a separate neural network to produce previews with almost none VRAM or compute requirement
-- Negative prompt, an extra text field that allows you to list what you don't want to see in generated image
-- Styles, a way to save part of prompt and easily apply them via dropdown later
-- Variations, a way to generate same image but with tiny differences
-- Seed resizing, a way to generate same image but at slightly different resolution
-- CLIP interrogator, a button that tries to guess prompt from an image
-- Prompt Editing, a way to change prompt mid-generation, say to start making a watermelon and switch to anime girl midway
-- Batch Processing, process a group of files using img2img
-- Img2img Alternative, reverse Euler method of cross attention control
-- Highres Fix, a convenience option to produce high resolution pictures in one click without usual distortions
-- Reloading checkpoints on the fly
-- Checkpoint Merger, a tab that allows you to merge up to 3 checkpoints into one
-- [Custom scripts](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Custom-Scripts) with many extensions from community
-- [Composable-Diffusion](https://energy-based-model.github.io/Compositional-Visual-Generation-with-Composable-Diffusion-Models/), a way to use multiple prompts at once
-     - separate prompts using uppercase `AND`
-     - also supports weights for prompts: `a cat :1.2 AND a dog AND a penguin :2.2`
-- No token limit for prompts (original stable diffusion lets you use up to 75 tokens)
-- DeepDanbooru integration, creates danbooru style tags for anime prompts
-- [xformers](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Xformers), major speed increase for select cards: (add --xformers to commandline args)
-- via extension: [History tab](https://github.com/yfszzx/stable-diffusion-webui-images-browser): view, direct and delete images conveniently within the UI
-- Generate forever option
-- Training tab
-     - hypernetworks and embeddings options
-     - Preprocessing images: cropping, mirroring, autotagging using BLIP or deepdanbooru (for anime)
-- Clip skip
-- Hypernetworks
-- Loras (same as Hypernetworks but more pretty)
-- A sparate UI where you can choose, with preview, which embeddings, hypernetworks or Loras to add to your prompt. 
-- Can select to load a different VAE from settings screen
-- Estimated completion time in progress bar
-- API
-- Support for dedicated [inpainting model](https://github.com/runwayml/stable-diffusion#inpainting-with-stable-diffusion) by RunwayML.
-- via extension: [Aesthetic Gradients](https://github.com/AUTOMATIC1111/stable-diffusion-webui-aesthetic-gradients), a way to generate images with a specific aesthetic by using clip images embeds (implementation of [https://github.com/vicgalle/stable-diffusion-aesthetic-gradients](https://github.com/vicgalle/stable-diffusion-aesthetic-gradients))
-- [Stable Diffusion 2.0](https://github.com/Stability-AI/stablediffusion) support - see [wiki](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Features#stable-diffusion-20) for instructions
-- [Alt-Diffusion](https://arxiv.org/abs/2211.06679) support - see [wiki](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Features#alt-diffusion) for instructions
-- Now without any bad letters!
-- Load checkpoints in safetensors format
-- Eased resolution restriction: generated image's domension must be a multiple of 8 rather than 64
-- Now with a license!
-- Reorder elements in the UI from settings screen
-- 
+### Framework Structure of AIGC Platform
 
-## Installation and Running
-Make sure the required [dependencies](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Dependencies) are met and follow the instructions available for both [NVidia](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Install-and-Run-on-NVidia-GPUs) (recommended) and [AMD](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Install-and-Run-on-AMD-GPUs) GPUs.
+The platform is mainly composed of the following core modules:
 
-Alternatively, use online services (like Google Colab):
+- The Scheduling Management System is used to flexibly manage hardware resources such as GPUs. It can automatically adjust and optimize resource allocation according to the current computing resources to meet the demands of different computing tasks;
+- AITP is mainly responsible for personalized model training and model service deployment. It can not only improve the performance of the model, but also make the model more stable;
+- AIGC is mainly responsible for generating personalized scene pictures. It can generate accurate scene pictures that fit customer requirements according to different customer requirements;
+- SS Support Service is responsible for adapting the interaction between external interfaces and the AI platform, including parsing MQ messages, docking distributed caches, and querying AIGC process information. It can effectively ensure the stable operation of the AI platform;
+- The Monitoring Platform is responsible for monitoring the operation of each module, collecting real-time logs, real-time status monitoring, to ensure the normal operation of the AI platform and timely discover abnormalities;
+- GW, as a gateway, mainly implements authentication and flow control of external access to ensure the safe operation of the AI platform.
 
-- [List of Online Services](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Online-Services)
+<img width="860" alt="Screen Shot 2023-02-22 at 11 27 05" src="https://user-images.githubusercontent.com/1998680/220514486-e44ecc40-f223-40b8-b592-c31e3e655201.png">
 
-### Automatic Installation on Windows
-1. Install [Python 3.10.6](https://www.python.org/downloads/windows/), checking "Add Python to PATH"
-2. Install [git](https://git-scm.com/download/win).
-3. Download the stable-diffusion-webui repository, for example by running `git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui.git`.
-4. Place stable diffusion checkpoint (`model.ckpt`) in the `models/Stable-diffusion` directory (see [dependencies](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Dependencies) for where to get it).
-5. Run `webui-user.bat` from Windows Explorer as normal, non-administrator, user.
 
-### Automatic Installation on Linux
-1. Install the dependencies:
-```bash
-# Debian-based:
-sudo apt install wget git python3 python3-venv
-# Red Hat-based:
-sudo dnf install wget git python3
-# Arch-based:
-sudo pacman -S wget git python3
-```
-2. To install in `/home/$(whoami)/stable-diffusion-webui/`, run:
-```bash
-bash <(wget -qO- https://raw.githubusercontent.com/AUTOMATIC1111/stable-diffusion-webui/master/webui.sh)
-```
 
-### Installation on Apple Silicon
+All requests must pass through the Gateway (GW) for processing, whether it be a normal read request, such as a state data query during image generation, or a compensation in an exceptional situation, which must be synchronized with the Support Server (SS) via GW; while read requests for images with different styles generated by AIGC access the Data File Storage (DFS) directly, thus saving unnecessary waiting time. Moreover, write operations related to image training and AIGC generation require sending Message Queue (MQ) to the AI module for asynchronous processing in order to ensure service performance and quality of image generation. As for write requests such as cancel commands, they must go directly to the Support Server (SS) via GW to complete the corresponding cancel operations. In order to ensure that each request is processed as quickly as possible, GW also ranks all requests, with urgent requests first and ordinary requests later, for fair scheduling, which can be achieved through different priority queues.
 
-Find the instructions [here](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Installation-on-Apple-Silicon).
+### AI Training Platform
 
-## Contributing
-Here's how to add code to this repo: [Contributing](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Contributing)
+The AI Training Platform, based on the DreamBooth algorithm, enables users to train personalized text-to-image conversion models. Inputs include three to five images, a theme category name, and a base model, while outputs include a unique identifier and a personalized text-to-image conversion model. Additionally, users can deploy their trained models to existing applications for real-time text-to-image transformation.
 
-## Documentation
-The documentation was moved from this README over to the project's [wiki](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki).
+SM does not directly handle MQ messages, but instead leaves it to the SS service to parse. It will pass the relevant scheduling information to the SM interface to create and bind Pods to Nodes (GPUs), and start the computing containers. It will then transmit the compute task information to the Node for processing, and the result will be encapsulated as an MQ message by SS and sent to the MQ queue.
 
-## Credits
-Licenses for borrowed code can be found in `Settings -> Licenses` screen, and also in `html/licenses.html` file.
 
-- Stable Diffusion - https://github.com/CompVis/stable-diffusion, https://github.com/CompVis/taming-transformers
-- k-diffusion - https://github.com/crowsonkb/k-diffusion.git
-- GFPGAN - https://github.com/TencentARC/GFPGAN.git
-- CodeFormer - https://github.com/sczhou/CodeFormer
-- ESRGAN - https://github.com/xinntao/ESRGAN
-- SwinIR - https://github.com/JingyunLiang/SwinIR
-- Swin2SR - https://github.com/mv-lab/swin2sr
-- LDSR - https://github.com/Hafiidz/latent-diffusion
-- MiDaS - https://github.com/isl-org/MiDaS
-- Ideas for optimizations - https://github.com/basujindal/stable-diffusion
-- Cross Attention layer optimization - Doggettx - https://github.com/Doggettx/stable-diffusion, original idea for prompt editing.
-- Cross Attention layer optimization - InvokeAI, lstein - https://github.com/invoke-ai/InvokeAI (originally http://github.com/lstein/stable-diffusion)
-- Sub-quadratic Cross Attention layer optimization - Alex Birch (https://github.com/Birch-san/diffusers/pull/1), Amin Rezaei (https://github.com/AminRezaei0x443/memory-efficient-attention)
-- Textual Inversion - Rinon Gal - https://github.com/rinongal/textual_inversion (we're not using his code, but we are using his ideas).
-- Idea for SD upscale - https://github.com/jquesnelle/txt2imghd
-- Noise generation for outpainting mk2 - https://github.com/parlance-zz/g-diffuser-bot
-- CLIP interrogator idea and borrowing some code - https://github.com/pharmapsychotic/clip-interrogator
-- Idea for Composable Diffusion - https://github.com/energy-based-model/Compositional-Visual-Generation-with-Composable-Diffusion-Models-PyTorch
-- xformers - https://github.com/facebookresearch/xformers
-- DeepDanbooru - interrogator for anime diffusers https://github.com/KichangKim/DeepDanbooru
-- Sampling in float32 precision from a float16 UNet - marunine for the idea, Birch-san for the example Diffusers implementation (https://github.com/Birch-san/diffusers-play/tree/92feee6)
-- Instruct pix2pix - Tim Brooks (star), Aleksander Holynski (star), Alexei A. Efros (no star) - https://github.com/timothybrooks/instruct-pix2pix
-- Security advice - RyotaK
-- Initial Gradio script - posted on 4chan by an Anonymous user. Thank you Anonymous user.
-- (You)
+MQ messages consist of two parts: message header and message body.
+
+1. The message header format is as follows:
+    - Header: Contains the request's metadata to help the SM schedule different GPU resources to implement AI computation tasks;
+    - reqNo: UUID globally unique, tracks all AI task requests, and is also the unique identifier of the request;
+    - priority: Priority, SM schedules resources based on different priorities, the higher the priority, the higher the priority;
+    - taskType: Task type, currently mainly divided into two categories: TP training tasks and GC generation tasks;
+    - group: Group identifier, one-to-one correspondence with Node, assigns the same group of computation tasks to the same Node.
+2. The message body format is as follows:
+    - method: The method name of the AI algorithm invoked by the AI task;
+    - parameters: The parameters of the method.
+    
+    
+### AI**GC Platform**
+
+The AI**GC Platform** is based on the **Stable Diffusion Algorithm** and supports users' text-to-image conversion. Inputs include text prompts and image generation parameters, outputs are a unique identifier and generated image. It is a trained model that supports users to generate images of various styles in real time, to meet different needs.
+
+The processing flow is similar to the training platform. The acquired model is a newly trained personalized model. The SS service parses the AIGC generation algorithm parameters, calls the SM interface to create an appropriate algorithm Pod, and binds it to the Node (GPU) to pass the algorithm parameters and generate the image.
+
+
+MQ messages consist of two parts: message header and message body.
+
+1. The message header format is as follows:
+    - Header: Contains the request's metadata to help the SM schedule different GPU resources to implement AI computation tasks;
+    - reqNo: UUID globally unique, tracks all AI task requests, and is also the unique identifier of the request;
+    - priority: Priority, SM schedules resources based on different priorities, the higher the priority, the higher the priority;
+    - taskType: Task type, currently mainly divided into two categories: TP training tasks and GC generation tasks;
+    - group: Group identifier, one-to-one correspondence with Node, assigns the same group of computation tasks to the same Node.
+2. The message body format is as follows:
+    - method: The method name of the AI algorithm invoked by the AI task;
+    - parameters: The parameters of the method.
+
+### Resource Scheduling System
+
+The Resource Scheduling System consists of SM cluster management, multi-level scheduling framework, and container resource prediction, and beyond GPU resources, can also be extended to support physical resource scheduling (e.g., CPU, memory, disk, and network) based on a physical resource list. The physical resource list is a list of all physical resources used by the AIGC platform, including specifications and quantities of each resource. The resource list can be used to match resources required for various tasks and determine system capacity, as well as to forecast resources needed for different types of tasks in advance to ensure optimal usage of all resources.
+
+The GPU Resource Scheduling System is implemented by an SM scheduling framework for elastic management of GPU resources, and monitored by DevicePlugin for GPU resource usage system.
+
+It mainly implements the following functions:
+
+1. AI-related functions
+Mainly used to schedule AI algorithm Pods to process MQ transmitted computing tasks based on the free degree of GPU resources in the Node. There are some parameters in the MQ message, such as priority. When encountering such tasks, resources are scheduled first to meet the request. In addition, newly added and deleted GPUs can be automatically sensed.
+2. Service-related functions
+Load balancing.
+
+The SM scheduling system transmits MQ messages to the SS service. Upon receiving the message, the SS service calls the SM interface and allocates idle GPU nodes according to the required resource information. It then creates Pods and binds them to the GPU nodes. After the calculation is complete, it notifies the SM scheduling system to delete the Pod and reclaim the resources, thus completing resource scheduling and management.
+
+
+### Summary
+
+AIGC platform provides powerful AI training and image generation services to meet various types of needs, with flexible resource management and scheduling capabilities. It can provide better services according to the requirements of physical resources, including AI model training, AI image generation, elastic management, load balance, etc., and supports various algorithms such as DreamBooth for real-time text-to-image conversion, giving AI developers more functions and possibilities.
